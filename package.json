@@ -1,0 +1,21 @@
+{
+  "name": "flappy-miden",
+  "version": "1.0.0",
+  "description": "Flappy Bird with real on-chain transactions on Miden testnet",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@miden-sdk/miden-sdk": "^0.14.0",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

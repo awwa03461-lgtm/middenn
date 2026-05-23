@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy Miden — Fly On-Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;700&family=Bungee&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+<div class="scanlines"></div>
+
+<header class="hud">
+    <div class="hud-left">
+        <div class="logo">
+            <span class="logo-bracket">[</span><span>FLAPPY/MIDEN</span><span class="logo-bracket">]</span>
+        </div>
+        <div class="status-pill" id="walletStatus">
+            <span class="status-dot"></span>
+            <span id="walletText">INITIALIZING...</span>
+        </div>
+    </div>
+    <div class="hud-right">
+        <button class="btn-pixel btn-small" id="exportBtn" style="display:none;">EXPORT</button>
+        <button class="btn-pixel btn-small" id="importBtn" style="display:none;">IMPORT</button>
+        <button class="btn-pixel" id="connectBtn">CONNECT WALLET</button>
+    </div>
+</header>
+
+<main class="container">
+    <aside class="panel">
+        <h3 class="panel-title">// PLAYER STATS</h3>
+        <div class="stat-block">
+            <div class="stat-label">ADDRESS</div>
+            <div class="stat-value" id="statAddress">0x000...000</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">HIGH SCORE</div>
+            <div class="stat-value stat-big" id="statHighScore">0</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">GAMES PLAYED</div>
+            <div class="stat-value" id="statGames">0</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">GLOBAL RECORD</div>
+            <div class="stat-value stat-accent" id="statGlobal">—</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">BALANCE</div>
+            <div class="stat-value" id="statBalance">— TST</div>
+        </div>
+    </aside>
+
+    <section class="game-section">
+        <div class="canvas-frame">
+            <canvas id="gameCanvas" width="400" height="560"></canvas>
+            
+            <div class="overlay" id="loadingScreen">
+                <h2 class="loading-title">LOADING MIDEN...</h2>
+                <div class="loader"><div class="loader-bar"></div></div>
+                <p class="loading-status" id="loadingStatus">Initializing Web SDK...</p>
+            </div>
+
+            <div class="overlay overlay-hidden" id="startScreen">
+                <h1 class="game-title">FLAPPY<br><span>MIDEN</span></h1>
+                <p class="game-subtitle">>> SPACE OR CLICK TO FLY <<</p>
+                <button class="btn-pixel btn-big" id="startBtn">START GAME</button>
+                <p class="hint">↑ real transactions on miden testnet</p>
+            </div>
+
+            <div class="overlay overlay-hidden" id="needFaucetScreen">
+                <h2 class="faucet-title">NEED TESTNET TOKENS</h2>
+                <p class="faucet-text">Your wallet needs tokens to submit scores.</p>
+                <div class="addr-box">
+                    <div class="stat-label">YOUR ADDRESS</div>
+                    <div class="addr-value" id="faucetAddress">0x...</div>
+                    <button class="btn-pixel btn-small" id="copyAddrBtn">COPY</button>
+                </div>
+                <a href="https://faucet.testnet.miden.io" target="_blank" class="btn-pixel btn-accent btn-big">
+                    GET TOKENS
+                </a>
+                <button class="btn-pixel btn-ghost" id="checkBalanceBtn" style="margin-top:12px;">
+                    I'VE GOT TOKENS — CHECK
+                </button>
+                <p class="hint">paste address in faucet, wait ~30s, click check</p>
+            </div>
+
+            <div class="overlay overlay-hidden" id="gameOverScreen">
+                <h2 class="gameover-title">GAME OVER</h2>
+                <div class="score-display">
+                    <div class="score-label">YOUR SCORE</div>
+                    <div class="score-value" id="finalScore">0</div>
+                </div>
+                <div class="score-display" id="newRecordBanner" style="display:none;">
+                    <div class="record-badge">★ NEW RECORD ★</div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-pixel" id="restartBtn">RESTART</button>
+                    <button class="btn-pixel btn-accent" id="submitBtn">SUBMIT TO CHAIN</button>
+                </div>
+            </div>
+
+            <div class="overlay overlay-hidden" id="txScreen">
+                <h2 class="tx-title">SUBMITTING...</h2>
+                <div class="loader"><div class="loader-bar"></div></div>
+                <p class="tx-status" id="txStatus">Building transaction...</p>
+                <p class="tx-hint" id="txHint">This takes 10-30 seconds (zero-knowledge proof generation)</p>
+            </div>
+
+            <div class="overlay overlay-hidden" id="successScreen">
+                <h2 class="success-title">✓ ON-CHAIN</h2>
+                <p class="success-text">Your score is permanently recorded on Miden.</p>
+                <div class="tx-hash-display">
+                    <div class="stat-label">TX HASH</div>
+                    <div class="tx-hash" id="txHashDisplay">0x...</div>
+                </div>
+                <a id="explorerLink" href="#" target="_blank" class="btn-pixel btn-small">VIEW ON EXPLORER</a>
+                <button class="btn-pixel" id="successCloseBtn" style="margin-top:12px;">CONTINUE</button>
+            </div>
+        </div>
+        <div class="ingame-score" id="ingameScore">0</div>
+    </section>
+
+    <aside class="panel">
+        <h3 class="panel-title">// LEADERBOARD</h3>
+        <div class="leaderboard-list" id="leaderboardList">
+            <div class="lb-item lb-empty"><span>No scores yet.</span></div>
+        </div>
+        <div class="panel-footer">
+            <span class="dot-blink"></span>
+            <span class="footer-text">MIDEN TESTNET LIVE</span>
+        </div>
+    </aside>
+</main>
+
+<footer class="site-footer">
+    <div class="footer-col"><span class="footer-label">NETWORK:</span><span class="footer-val">miden-testnet</span></div>
+    <div class="footer-col"><span class="footer-label">SDK:</span><span class="footer-val">@miden-sdk v0.14</span></div>
+    <div class="footer-col"><span class="footer-label">v1.0.0</span></div>
+</footer>
+
+<!-- Export Modal -->
+<div id="exportModal" class="modal modal-hidden">
+    <div class="modal-content">
+        <h2 class="modal-title">📤 EXPORT WALLET</h2>
+        <p class="modal-text">این فایل رو در جای امن نگه دار. با این فایل می‌تونی wallet ت رو در دستگاه دیگه‌ای import کنی.</p>
+        <p class="modal-warning">⚠️ این فایل کلید خصوصی wallet ته. به کسی نده!</p>
+        <button class="btn-pixel btn-accent btn-big" id="downloadWalletBtn" style="margin-top:20px;">
+            DOWNLOAD WALLET FILE
+        </button>
+        <button class="btn-pixel btn-ghost" id="closeExportBtn" style="margin-top:12px;">CLOSE</button>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div id="importModal" class="modal modal-hidden">
+    <div class="modal-content">
+        <h2 class="modal-title">📥 IMPORT WALLET</h2>
+        <p class="modal-text">یک فایل wallet که قبلاً export کرده بودی رو انتخاب کن.</p>
+        <p class="modal-warning">⚠️ این کار wallet فعلی ات رو جایگزین می‌کنه!</p>
+        <input type="file" id="walletFileInput" accept=".json" style="margin-top:20px; display:block; width:100%;">
+        <div class="btn-row" style="justify-content:center;">
+            <button class="btn-pixel btn-ghost" id="closeImportBtn">CANCEL</button>
+            <button class="btn-pixel btn-accent" id="confirmImportBtn">IMPORT</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
